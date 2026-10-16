@@ -4,9 +4,21 @@ A self-contained piano practice webpage. It plays recorded grand-piano samples l
 
 ## Play
 
-Open `dist/index.html` in a current desktop or mobile browser and select **Start piano** to enable audio. Play by clicking or touching the keys, or press the displayed letter keys. Hold several keys for a chord. Drag across keys to play glissandos, hold Space for the sustain pedal, and press Escape to stop the notes. Choose one or two visible octaves, or explore the full 88-key A0–C8 piano by scrolling. The shortcut octave selector and Left/Right arrow keys move the computer-keyboard mapping. The C major exercise marks notes in sequence. The tempo, octave, volume, touch, room, and brightness controls can be adjusted as you play; preferences are saved in local browser storage.
+Open `dist/index.html` in a current desktop or mobile browser and select **Start piano** to enable audio. Play by clicking or touching the keys, or press the displayed letter and number keys. Hold several keys for a chord. Drag across keys to play glissandos, hold Space for the sustain pedal, and press Escape to stop the notes. Choose one or two visible octaves, or explore the full 88-key A0–C8 piano by scrolling. The shortcut octave selector and Left/Right arrow keys move the computer-keyboard mapping. The C major exercise marks notes in sequence. The tempo, octave, volume, touch, room, and brightness controls can be adjusted as you play; preferences are saved in local browser storage.
 
 Keyboard input needs only a file opened in the browser. For the most consistent browser audio permissions, the site can also be served from any static file server.
+
+## Computer keyboard
+
+Press **Enter** to start audio, or Tab to **Start piano** and activate it. **Play with keyboard** focuses the piano after you edit settings.
+
+- Lower octave, chromatic order: `A W S E D F T G Y H U J K`.
+- Upper octave, chromatic order: `Z 2 X 3 C V 5 B 6 N 7 M ,`. `K` and `Z` share the boundary note.
+- Left/Right arrows shift the mapping by an octave, preserving tutorial progress and demo playback.
+- Hold Space in the piano area for sustain; Escape stops sound. `R` plays/pauses the demo, `P` starts/ends guided practice, and Backspace restarts the excerpt.
+- Tab navigates controls and piano keys. Enter/Space activates the focused button; piano key buttons sound for the duration of the press.
+
+Mappings use physical keyboard positions, so they also work with Arabic and other input languages. Letter labels show QWERTY positions. Multiple held keys play chords, and auto-repeat does not retrigger notes. Typing in settings and native button activation keep their normal behavior. Key release, octave changes, and focus loss clear held notes.
 
 ## Guided tutorials
 
@@ -27,6 +39,8 @@ node --test tests/lessons.test.js
 ```
 
 Tests cover score ranges, beat timing, output-latency compensation, synchronized clicks, cancellation, resume, interruptions, and completion.
+
+The optional browser test covers both keyboard octaves, chords, sustain, input-language handling, tutorial shortcuts, focus, and key release. Install Playwright with `npm install --no-save --package-lock=false playwright`, then run `node --test tests/keyboard.browser.cjs`. On Windows it uses installed Microsoft Edge; on other platforms, run `npx playwright install chromium` first.
 
 ## Rebuild
 

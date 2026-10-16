@@ -5,7 +5,10 @@
   const engine = new PianoEngine(data);
   const held = new Map(), pointers = new Map(), keys = new Map();
   const blackNotes = new Set([1,3,6,8,10]);
-  const codes = ['KeyA','KeyW','KeyS','KeyE','KeyD','KeyF','KeyT','KeyG','KeyY','KeyH','KeyU','KeyJ','KeyK'];
+  const codes = ['KeyA','KeyW','KeyS','KeyE','KeyD','KeyF','KeyT','KeyG','KeyY','KeyH','KeyU','KeyJ','KeyK',
+    'Digit2','KeyX','Digit3','KeyC','KeyV','Digit5','KeyB','Digit6','KeyN','Digit7','KeyM','Comma'];
+  const keyOffset = code => code==='KeyZ'?12:codes.indexOf(code);
+  const shortcut = offset => offset===12?'K / Z':codes[offset]==='Comma'?',':codes[offset]?.replace(/^(Key|Digit)/,'')||'';
   const names = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
   const sequence = [0,2,4,5,7,9,11,12,11,9,7,5,4,2,0];
   let lesson = PianoLessons[0], lessonMode = 'idle', lessonStep = 0, chordPlayed = new Set(), demoNotes = new Set();
@@ -194,10 +197,11 @@
     held.clear();pointers.clear();pedalLatch=false;spacePedal=false;
     engine.allOff();metro.stop();$('metronome').setAttribute('aria-pressed','false');render();
   }
-  function build() {
+  function build(bounds) {
     keys.clear();$('keyboard').replaceChildren();
     const full=$('range').value==='88', span=Number($('range').value);
-    const first=full?21:Math.max(21,Math.min(108-span,base)), last=full?108:Math.min(108,first+span);
+    const first=bounds?.first??(full?21:Math.max(21,Math.min(108-span,base))), last=bounds?.last??(full?108:Math.min(108,first+span));
+    $('keyboard').dataset.first=first;$('keyboard').dataset.last=last;
     const whiteCount=Array.from({length:last-first+1},(_,i)=>first+i).filter(midi=>!blackNotes.has(midi%12)).length;
     $('keyboard').style.setProperty('--white-count',whiteCount);
     $('keyboard').style.minWidth=(whiteCount*46)+'px';
@@ -205,11 +209,12 @@
     const add=(offset,black,boundary)=>{
       const key=document.createElement('button');key.type='button';key.className='piano-key '+(black?'black':'white');
       key.dataset.offset=String(offset);key.disabled=!engine.ready;
-      key.setAttribute('aria-label',name(base+offset)+(codes[offset]?', '+codes[offset].slice(3)+' key':''));
+      key.setAttribute('aria-label',name(base+offset)+(shortcut(offset)?', keyboard '+shortcut(offset):''));
+      if(codes[offset])key.setAttribute('aria-keyshortcuts',offset===12?'K Z':shortcut(offset));
       if(black)key.style.left=(boundary/whiteCount*100)+'%';
       const note=document.createElement('span');note.className='key-note';note.textContent=name(base+offset);
-      const shortcut=document.createElement('span');shortcut.className='key-shortcut';shortcut.textContent=codes[offset]?.slice(3)||'';
-      key.append(note,shortcut);keys.set(offset,key);$('keyboard').append(key);
+      const hint=document.createElement('span');hint.className='key-shortcut';hint.textContent=shortcut(offset);
+      key.append(note,hint);keys.set(offset,key);$('keyboard').append(key);
       key.addEventListener('pointerdown',e=>{
         if(e.pointerType==='mouse'&&e.button!==0)return;
         e.preventDefault();key.setPointerCapture(e.pointerId);pointers.set(e.pointerId,offset);press(offset,'pointer:'+e.pointerId,e.pressure);
@@ -236,20 +241,36 @@
   });
   for(const event of ['pointerup','pointercancel'])window.addEventListener(event,e=>{release('pointer:'+e.pointerId);pointers.delete(e.pointerId);});
   function isEditing(target) {return target.isContentEditable||/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);}
+  function eventCode(e) {
+    if(e.code)return e.code;
+    if(/^[a-z]$/i.test(e.key))return 'Key'+e.key.toUpperCase();
+    if(/^\d$/.test(e.key))return 'Digit'+e.key;
+    return {' ':'Space',',':'Comma'}[e.key]||e.key;
+  }
   document.addEventListener('keydown',e=>{
-    if(e.code==='Escape'){e.preventDefault();silence();return;}
+    if(e.isComposing)return;
+    const code=eventCode(e);
+    if(code==='Escape'){e.preventDefault();silence();return;}
     if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey||isEditing(e.target))return;
-    if(e.code==='Space'&&e.target.id!=='start') {e.preventDefault();if(!e.repeat&&engine.ready){spacePedal=true;pedal();}return;}
-    if(e.code==='ArrowLeft'||e.code==='ArrowRight'){
-      e.preventDefault();$('octave').value=String(Math.max(0,Math.min(7,Number($('octave').value)+(e.code==='ArrowRight'?1:-1))));
+    if(code==='Enter'&&!engine.ready&&!e.target.closest('button,a,summary')){e.preventDefault();if(!e.repeat&&!$('start').disabled)$('start').click();return;}
+    if(code==='Space') {
+      if(e.target.closest('button,a,summary'))return;
+      e.preventDefault();if(!e.repeat&&engine.ready){spacePedal=true;pedal();}return;
+    }
+    const action={KeyR:'listen',KeyP:'learn',Backspace:'lesson-restart'}[code];
+    if(action){e.preventDefault();if(!e.repeat&&!$(action).disabled)$(action).click();return;}
+    if(code==='ArrowLeft'||code==='ArrowRight'){
+      e.preventDefault();if(e.repeat)return;
+      $('octave').value=String(Math.max(0,Math.min(7,Number($('octave').value)+(code==='ArrowRight'?1:-1))));
       $('octave').dispatchEvent(new Event('change'));return;
     }
-    const offset=codes.indexOf(e.code);
-    if(offset>=0){e.preventDefault();if(!e.repeat)press(offset,'keyboard:'+e.code);}
+    const offset=keyOffset(code);
+    if(offset>=0){e.preventDefault();if(!e.repeat){press(offset,'keyboard:'+code);const key=keys.get(offset);if(key){const viewport=$('keyboard').parentElement;if(key.offsetLeft<viewport.scrollLeft||key.offsetLeft+key.offsetWidth>viewport.scrollLeft+viewport.clientWidth)viewport.scrollLeft=Math.max(0,key.offsetLeft-viewport.clientWidth/2);}}}
   });
   document.addEventListener('keyup',e=>{
-    if(e.code==='Space'&&spacePedal){spacePedal=false;pedal();}
-    if(codes.includes(e.code))release('keyboard:'+e.code);
+    const code=eventCode(e);
+    if(code==='Space'&&spacePedal){spacePedal=false;pedal();}
+    if(keyOffset(code)>=0)release('keyboard:'+code);
   });
   $('start').addEventListener('click',async()=>{
     $('start').disabled=true;$('start').textContent='Loading piano…';
@@ -265,7 +286,15 @@
       $('start').textContent='Reload to retry';$('start').disabled=false;$('start').onclick=()=>location.reload();
     }
   });
-  $('octave').addEventListener('change',()=>{silence();base=(Number($('octave').value)+1)*12;step=0;endLesson();build();save();});
+  $('octave').addEventListener('change',()=>{
+    // Remap physical keys without resetting a tutorial or its playback clock.
+    const keepLesson=lessonMode!=='idle', bounds=keepLesson?{first:Number($('keyboard').dataset.first),last:Number($('keyboard').dataset.last)}:undefined;
+    for(const source of [...held.keys()])release(source);
+    pointers.clear();pedalLatch=false;spacePedal=false;pedal();
+    base=(Number($('octave').value)+1)*12;step=0;build(bounds);lessonUI();save();
+    if(!keepLesson){const key=keys.get(0)||keys.values().next().value;if(key)$('keyboard').parentElement.scrollLeft=Math.max(0,key.offsetLeft-60);}
+  });
+  $('keyboard-focus').addEventListener('click',()=>$('keyboard').focus());
   for(const id of ['volume','touch','room','tone']){
     $(id).addEventListener('input',controls);$(id).addEventListener('change',save);
   }
