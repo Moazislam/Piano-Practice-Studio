@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101a14">
-<meta name="description" content="An offline piano practice studio with recorded grand-piano sound, sustain, guided scales and a precise metronome.">
+<meta name="description" content="An offline 88-key piano with recorded grand-piano sound, tutorials by level, synchronized key highlighting and a precise metronome.">
 <title>Piano Practice Studio</title>
 <style>
 :root{color-scheme:dark;font-family:Inter,Segoe UI,Arial,sans-serif;color:#edf2e7;background:#101a14;font-synthesis:none}
@@ -42,6 +42,12 @@ main{padding:max(8px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-righ
 .sound-controls{display:grid;grid-template-columns:repeat(4,1fr)}.sound-controls .field:first-child{grid-column:1/-1}
 }
 @media(prefers-reduced-motion:reduce){.progress span{transition:none}}
+
+.range-tools{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:12px 0}.range-tools label{font-size:13px;color:#afc1a9}.keyboard-scroll{overflow-x:auto;padding-bottom:8px;scrollbar-color:#8da967 #142119}.keyboard{min-width:720px}.white{flex:1;width:auto;min-width:0}.black{width:calc(100% / var(--white-count) * .64)}.piano-key.demo{background:linear-gradient(#94cdeb,#5d9ec2);color:#142119}.piano-key.target:after{background:#dca346;box-shadow:0 0 0 3px #dca34644}.black.target:after{background:#ffe0a1}.tutorial{border-top:1px solid #3a4a39;margin-top:24px;padding-top:24px}.tutorial-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.tutorial h2{font-size:24px;font-weight:500;margin:8px 0 20px}.lesson-selectors{display:flex;gap:16px;flex-wrap:wrap}.lesson-selectors .field:last-child{flex:2}.loop-label{font-size:13px;color:#b7c5b6}.lesson-progress{height:5px;border-radius:5px;background:#384734;overflow:hidden}.lesson-progress span{display:block;height:100%;background:#94cdeb;width:0}.lesson-notes{display:flex;gap:6px;overflow-x:auto;margin-top:16px;padding:4px 3px 10px}.lesson-note{flex-shrink:0;padding:9px 10px;border:1px solid #52634e;border-radius:6px;font-size:12px;color:#b7c5b6;display:flex;flex-direction:column;gap:5px;text-align:center}.lesson-note.current{border-color:#dca346;background:#473c25;color:#ffe0a1}.lesson-note.done{opacity:.55}.lesson-note small{font-size:10px}#lesson-status{font-size:14px;min-height:22px;color:#d5e5bb}
+@media(max-width:650px){.keyboard{min-width:650px}.black{width:calc(100% / var(--white-count) * .64)}}
+@media(max-width:650px),(orientation:landscape) and (max-height:520px){
+.topline{order:1}.readout{order:2}.range-tools{order:3}.keyboard-scroll{order:4;width:100%;min-width:0}#message{order:5}.play-controls{order:6}.practice-row{order:7}.tutorial{order:8}.sound-controls{order:9}
+}
 </style>
 </head>
 <body><main>
@@ -49,19 +55,30 @@ main{padding:max(8px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-righ
 <section class="studio" aria-label="Interactive piano">
   <div class="topline"><div class="sound-status" role="status"><span class="status-dot" id="status-dot" aria-hidden="true"></span><span id="sound-status">Recorded grand piano · offline ready</span></div><button class="primary" id="start">Start piano</button></div>
   <div class="sound-controls">
-    <div class="field"><label for="octave">Keyboard range</label><select id="octave"><option value="2">C2 – C3 · Bass</option><option value="3">C3 – C4 · Low</option><option value="4" selected>C4 – C5 · Middle C</option><option value="5">C5 – C6 · High</option><option value="6">C6 – C7 · Treble</option></select></div>
+    <div class="field"><label for="octave">Shortcut octave</label><select id="octave"><option value="0">A0 · Lowest</option><option value="1">C1 · Deep bass</option><option value="2">C2 · Bass</option><option value="3">C3 · Low</option><option value="4" selected>C4 · Middle C</option><option value="5">C5 · High</option><option value="6">C6 · Treble</option><option value="7">C7 · Highest</option></select></div>
     <div class="field"><label for="volume">Volume <output id="volume-value">65%</output></label><input id="volume" type="range" min="0" max="100" value="65"></div>
     <div class="field"><label for="touch">Touch <output id="touch-value">Medium</output></label><input id="touch" type="range" min="25" max="100" value="72" aria-describedby="touch-help"></div>
     <div class="field"><label for="room">Room <output id="room-value">18%</output></label><input id="room" type="range" min="0" max="100" value="18"></div>
     <div class="field"><label for="tone">Brightness <output id="tone-value">60%</output></label><input id="tone" type="range" min="0" max="100" value="60"></div>
   </div>
   <div class="readout"><span class="notes" id="notes">Your piano is ready</span><span class="secondary" id="pedal-status">Sustain off</span></div>
-  <div class="keyboard" id="keyboard" role="group" aria-label="Piano keys. White keys: A S D F G H J K. Black keys: W E T Y U."></div>
+  <div class="range-tools"><label for="range">Visible keys</label><select id="range"><option value="24" selected>Two octaves</option><option value="12">One octave</option><option value="88">Full piano · 88 keys</option></select><span class="secondary">Scroll to explore · ← / → shift octave</span><span id="range-label" class="secondary"></span></div>
+  <div class="keyboard-scroll"><div class="keyboard" id="keyboard" role="group" aria-label="Piano keys"></div></div>
   <div class="play-controls">
     <div class="button-group"><button id="sustain" aria-pressed="false" disabled>Sustain <kbd>Space</kbd></button><button id="stop" disabled>All notes off <kbd>Esc</kbd></button></div>
     <div class="metro-controls"><button id="metronome" aria-pressed="false" disabled>Metronome</button><label class="metro-label" for="tempo">BPM</label><input id="tempo" class="bpm" type="number" min="30" max="240" value="80" inputmode="numeric"><div class="beats" aria-label="Four beats per bar"><span class="beat"></span><span class="beat"></span><span class="beat"></span><span class="beat"></span></div></div>
   </div>
   <div class="practice-row"><div class="practice-info"><strong id="practice-title">One scale, one small step</strong><p id="practice-detail">Follow C major up and down at your own pace.</p><div class="progress" role="progressbar" aria-label="C major scale progress" aria-valuemin="0" aria-valuemax="15" aria-valuenow="0"><span id="progress-fill"></span></div></div><button id="practice" aria-pressed="false" disabled>Practice C major</button></div>
+  <section class="tutorial" aria-label="Song tutorials">
+    <div class="tutorial-heading"><div><span class="eyebrow">Learn a familiar melody</span><h2>Guided tutorials</h2></div><span class="secondary">Simplified opening excerpts</span></div>
+    <div class="lesson-selectors"><div class="field"><label for="level">Your level</label><select id="level"><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></div><div class="field"><label for="song">Famous piece</label><select id="song"></select></div></div>
+    <p id="lesson-composer" class="secondary"></p><p id="lesson-tip" class="small"></p>
+    <div class="button-group"><button id="listen" disabled>Listen &amp; follow</button><button id="learn" disabled>Practice step by step</button><button id="lesson-restart" disabled>Restart</button><label class="loop-label"><input type="checkbox" id="lesson-loop"> Loop excerpt</label></div>
+    <p id="lesson-status" role="status" aria-live="polite">Choose a piece, then start the piano.</p>
+    <div class="lesson-progress" role="progressbar" aria-label="Tutorial progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="lesson-fill"></span></div>
+    <div id="lesson-notes" class="lesson-notes" aria-label="Melody sequence"></div>
+    <p class="small">Gold keys are your next notes; blue keys are playing in the demo. BPM controls playback and the metronome together. Practice waits for every marked note, including chords.</p>
+  </section>
   <div id="message" role="status" aria-live="polite">Select Start piano to enable sound.</div>
 </section>
 <div class="tips"><div><strong>Play your way</strong><p>Click, tap, or use the letters on the keys. Hold several keys for a chord. Slide across the keyboard with your mouse or finger.</p></div><div><strong>Shape the sound</strong><p id="touch-help">Touch sets how softly or firmly notes are played. Hold Space for the sustain pedal, or toggle Sustain to keep it down. Escape stops all notes.</p></div></div>
@@ -70,6 +87,9 @@ main{padding:max(8px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-righ
 <script id="piano-sample-data" type="application/json">__PIANO_SAMPLES__</script>
 <script>
 __PIANO_ENGINE__
+</script>
+<script>
+__PIANO_LESSONS__
 </script>
 <script>
 __PIANO_APP__

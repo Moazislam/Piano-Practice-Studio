@@ -96,7 +96,7 @@ class PianoEngine {
   setRoom(value) {this.room = value; if (this.wet) this.wet.gain.setTargetAtTime(value * .65, this.context.currentTime, .04);}
   setTone(value) {this.tone = value;}
 
-  noteOn(midi, velocity = .72) {
+  noteOn(midi, velocity = .72, time = this.context?.currentTime) {
     if (!this.ready) return null;
     const ctx = this.context;
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -112,7 +112,7 @@ class PianoEngine {
     source.buffer = sample.buffer; source.playbackRate.value = Math.pow(2, (midi-root) / 12);
     const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.Q.value = .35;
     filter.frequency.value = Math.min(ctx.sampleRate * .45, 1800 + 7000 * this.tone + 5500 * velocity);
-    const gain = ctx.createGain(), now = ctx.currentTime;
+    const gain = ctx.createGain(), now = Math.max(ctx.currentTime, time ?? ctx.currentTime);
     const amplitude = .72 * Math.pow(Math.max(.05, Math.min(1,velocity)), 1.65);
     gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(amplitude,now+.003);
     source.connect(filter); filter.connect(gain); gain.connect(this.input);
@@ -128,10 +128,10 @@ class PianoEngine {
     this.pedal = down;
     if (!down) for (const voice of this.voices) if (!voice.held) this.release(voice);
   }
-  release(voice, duration) {
+  release(voice, duration, time = this.context.currentTime) {
     if (!voice || voice.ended || (voice.releasing && duration === undefined)) return;
     voice.releasing = true;
-    const now = this.context.currentTime;
+    const now = Math.max(this.context.currentTime, time);
     // Let even a quick tap speak before the damper begins its gradual decay.
     // Ordinary releases have a long, curved tail; panic/voice stealing stay fast.
     const releaseAt = duration === undefined ? Math.max(now, voice.started + .065) : now;

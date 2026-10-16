@@ -23,6 +23,7 @@ replacements = {
     "__PIANO_SAMPLES__": json.dumps(samples, separators=(",", ":")),
     "__PIANO_ENGINE__": (ROOT / "piano-engine.js").read_text(encoding="utf-8"),
     "__PIANO_APP__": (ROOT / "piano-app.js").read_text(encoding="utf-8"),
+    "__PIANO_LESSONS__": (ROOT / "piano-lessons.js").read_text(encoding="utf-8"),
 }
 for marker, content in replacements.items():
     if marker not in page:
