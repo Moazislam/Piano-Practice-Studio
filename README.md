@@ -10,7 +10,7 @@ Keyboard input needs only a file opened in the browser. For the most consistent 
 
 ## Computer keyboard
 
-Press **Enter** to start audio, or Tab to **Start piano** and activate it. **Play with keyboard** focuses the piano after you edit settings.
+Press **Enter** to start audio, or Tab to **Start piano** and activate it. Mouse or touch selections return focus to the piano automatically after choosing an option, releasing a slider, or toggling a checkbox. When typing BPM or navigating a setting with arrow keys, press **Enter** to apply the value and return to playing; **Escape** also returns to the piano and stops sound. **Play with keyboard** remains available as a manual focus shortcut.
 
 - Lower octave, chromatic order: `A W S E D F T G Y H U J K`.
 - Upper octave, chromatic order: `Z 2 X 3 C V 5 B 6 N 7 M ,`. `K` and `Z` share the boundary note.

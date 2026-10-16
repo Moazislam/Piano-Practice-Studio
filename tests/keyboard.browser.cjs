@@ -54,6 +54,23 @@ test('computer keyboard plays both octaves and operates tutorials without stuck 
     await page.selectOption('#range','88');await page.selectOption('#octave','0');await page.click('#keyboard-focus');
     const floor=await page.evaluate(()=>window.strikes.length);await page.keyboard.press('a');assert.equal(await page.evaluate(()=>window.strikes.length),floor);await page.keyboard.press('h');assert.equal(await page.evaluate(()=>window.strikes.at(-1)),21);
     await page.selectOption('#octave','7');await page.click('#keyboard-focus');const ceiling=await page.evaluate(()=>window.strikes.length);await page.keyboard.press(',');assert.equal(await page.evaluate(()=>window.strikes.length),ceiling);
+    // Pointer changes give piano shortcuts back immediately, without an outside click.
+    for(const [id,value] of [['range','24'],['octave','4'],['level','intermediate'],['song','canon']]){
+      await page.locator('#'+id).focus();await page.locator('#'+id).dispatchEvent('pointerdown',{pointerType:'mouse',button:0});
+      await page.selectOption('#'+id,value);assert.equal(await page.evaluate(()=>document.activeElement.id),'keyboard');
+      await page.keyboard.down('a');assert.equal(await page.locator('.piano-key.down').count(),1);await page.keyboard.up('a');
+    }
+    await page.click('#volume',{position:{x:40,y:14}});assert.equal(await page.evaluate(()=>document.activeElement.id),'keyboard');
+    await page.click('#lesson-loop');assert.equal(await page.evaluate(()=>document.activeElement.id),'keyboard');
+    // Editing stays active until committed; Enter applies the value and resumes notes.
+    await page.locator('#tempo').focus();await page.fill('#tempo','135');
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'tempo');await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#tempo').inputValue(),'135');assert.equal(await page.evaluate(()=>document.activeElement.id),'keyboard');
+    await page.keyboard.down('a');assert.equal(await page.locator('.piano-key.down').count(),1);await page.keyboard.up('a');
+    await page.locator('#tempo').focus();await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.id),'keyboard');
+    // Arrow navigation in a keyboard-focused selector must not lose focus after one option.
+    await page.locator('#range').focus();await page.keyboard.press('ArrowDown');assert.equal(await page.evaluate(()=>document.activeElement.id),'range');
+    await page.keyboard.press('Enter');assert.equal(await page.evaluate(()=>document.activeElement.id),'keyboard');
     await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     assert.deepEqual(errors,[]);
   } finally {await browser.close();}

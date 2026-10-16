@@ -241,6 +241,27 @@
   });
   for(const event of ['pointerup','pointercancel'])window.addEventListener(event,e=>{release('pointer:'+e.pointerId);pointers.delete(e.pointerId);});
   function isEditing(target) {return target.isContentEditable||/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);}
+  const pointerSettings = new WeakSet();
+  function focusPiano() {$('keyboard').focus({preventScroll:true});}
+  // Pointer selection is finished on change/release. Keyboard users can keep
+  // navigating a control with arrows and explicitly finish with Enter or Escape.
+  document.addEventListener('pointerdown',e=>{
+    if(e.target.matches('input,select'))pointerSettings.add(e.target);
+  });
+  document.addEventListener('change',e=>{
+    const control=e.target;
+    if(control.matches('select,input[type=checkbox]')&&pointerSettings.has(control)){
+      pointerSettings.delete(control);
+      queueMicrotask(()=>{if(document.activeElement===control)focusPiano();});
+    }
+  });
+  document.addEventListener('pointerup',e=>{
+    const control=document.activeElement;
+    if(control?.matches('input[type=range]')&&pointerSettings.has(control)){
+      pointerSettings.delete(control);focusPiano();
+    }
+  });
+  document.addEventListener('focusout',e=>pointerSettings.delete(e.target));
   function eventCode(e) {
     if(e.code)return e.code;
     if(/^[a-z]$/i.test(e.key))return 'Key'+e.key.toUpperCase();
@@ -250,6 +271,13 @@
   document.addEventListener('keydown',e=>{
     if(e.isComposing)return;
     const code=eventCode(e);
+    if(isEditing(e.target)){
+      pointerSettings.delete(e.target);
+      if(code==='Enter'||code==='Escape'){
+        e.preventDefault();focusPiano();if(code==='Escape')silence();
+      }
+      return;
+    }
     if(code==='Escape'){e.preventDefault();silence();return;}
     if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey||isEditing(e.target))return;
     if(code==='Enter'&&!engine.ready&&!e.target.closest('button,a,summary')){e.preventDefault();if(!e.repeat&&!$('start').disabled)$('start').click();return;}
@@ -294,7 +322,7 @@
     base=(Number($('octave').value)+1)*12;step=0;build(bounds);lessonUI();save();
     if(!keepLesson){const key=keys.get(0)||keys.values().next().value;if(key)$('keyboard').parentElement.scrollLeft=Math.max(0,key.offsetLeft-60);}
   });
-  $('keyboard-focus').addEventListener('click',()=>$('keyboard').focus());
+  $('keyboard-focus').addEventListener('click',focusPiano);
   for(const id of ['volume','touch','room','tone']){
     $(id).addEventListener('input',controls);$(id).addEventListener('change',save);
   }
